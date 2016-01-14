@@ -16,6 +16,10 @@
     "purescript-exceptions": "~0.3.4",
     "purescript-canvas": "~0.4.0",
     "purescript-signal": "~4.2.0",
-    "purescript-dom": "~0.2.14"
+    "purescript-dom": "~0.2.14",
+    "purescript-nonempty": "~0.1.2",
+    "purescript-arrays": "~0.4.4",
+    "purescript-profunctor-lenses": "~0.3.5",
+    "purescript-unfoldable": "~0.4.1"
   }
 }

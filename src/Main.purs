@@ -17,6 +17,7 @@ import DOM.Node.Types (NonElementParentNode(),Element(),ElementId(ElementId))
 
 import DOM.Node.NonElementParentNode (getElementById)
 
+import Data.Lens ((^.))
 import Data.Nullable (toMaybe)
 
 import Control.Timer (Timer())
@@ -27,10 +28,11 @@ import Control.Monad.Eff.Exception (EXCEPTION(),catchException, throw, message)
 import Control.Monad.Eff.Console (CONSOLE(), error, log)
 
 import Signal (foldp, runSignal, sampleOn, Signal())
-import Signal.DOM (CoordinatePair(), DimensionPair(), animationFrame, keyPressed)
+import Signal.DOM (animationFrame, keyPressed)
 import Signal.Time (Time())
 
-import Utils (drawImageFromElement)
+import Sprite (Sprite(),DimensionPair(),mkSprite,getFrame,_Element)
+import Utils (drawImageFromElement,drawSpriteFrame)
 
 upKeyCode :: Int
 upKeyCode = 38
@@ -55,6 +57,12 @@ type GameState =
   { ctx :: Context2D
   , box :: Rectangle
   , screen :: Rectangle
+  , images :: {
+    ship :: Element,
+    boom :: { sprite :: Sprite
+            , frame :: Int
+          }
+        }
   }
 
 type EffGame eff a =
@@ -62,6 +70,7 @@ type EffGame eff a =
       , canvas :: Canvas
       , timer :: Timer
       , dom :: DOM
+      , console :: CONSOLE
       | eff
       ) a
 
@@ -70,11 +79,14 @@ canvasRect = { x: 0.0, y: 0.0, w: 600.0, h: 600.0 }
 
 startState 
   :: Context2D 
+  -> Element
+  -> Sprite
   -> EffGame () GameState
-startState ctx = 
+startState ctx ship boom =
   pure { ctx: ctx
        , box: { x: 250.0 , y: 250.0 , w: 100.0 , h: 100.0 } 
        , screen: canvasRect
+       , images: { ship: ship , boom: { sprite: boom, frame: 0 } }
        }
 
 requestContext
@@ -118,15 +130,26 @@ upState
   -> EffGame () GameState
 upState input gs = do
   game <- gs
-  pure (game { box = moveBox input game.box })
+  pure <<< upSpriteFrame $ game { box = moveBox input game.box }
+  where
+    upSpriteFrame :: GameState -> GameState
+    upSpriteFrame g = 
+      if g.images.boom.frame == 0 || g.images.boom.frame < 12
+        then g { images = g.images { boom = g.images.boom { frame = g.images.boom.frame + 1 } } }
+        else g { images = g.images { boom = g.images.boom { frame = 0 } } }
 
-render :: Element -> EffGame () GameState -> EffGame () Unit
-render shipImg g = do
+render :: EffGame () GameState -> EffGame () Unit
+render g = do
   gameSt <- g
+  spriteFrame <- sFrame gameSt
   clearRect gameSt.ctx gameSt.screen
   setFillStyle "#0000FF" gameSt.ctx
-  drawImageFromElement gameSt.ctx shipImg gameSt.box.x gameSt.box.y
+  drawImageFromElement gameSt.ctx gameSt.images.ship gameSt.box.x gameSt.box.y
+  drawSpriteFrame gameSt.ctx (gameSt.images.boom.sprite ^. _Element) 230.0 230.0 spriteFrame
   pure unit
+  where
+    sFrame g = maybe (throw "Invalid sprite frame!") pure $
+      getFrame g.images.boom.sprite g.images.boom.frame
 
 getDocumentNode :: forall eff. Eff (dom :: DOM | eff) NonElementParentNode
 getDocumentNode = htmlDocumentToNonElementParentNode <$> (window >>= document)
@@ -137,6 +160,12 @@ getElemById
   -> Eff (dom :: DOM | eff) (Maybe Element)
 getElemById str ne = toMaybe <$> getElementById (ElementId str) ne
 
+loadImg
+  :: forall eff. String
+  -> NonElementParentNode
+  -> Eff (dom :: DOM, err :: EXCEPTION | eff) Element
+loadImg s dom = getElemById s dom >>= maybe (throw $ "Couldn't load: " <> s) pure
+
 main :: EffGame () Unit
 main = do
   -- Init
@@ -144,19 +173,16 @@ main = do
   frames <- animationFrame
   docNEPN <- getDocumentNode
   -- Image loading
-  img' <- getElemById "boomsImage" docNEPN
-  img <- getElemById "shipImage" docNEPN
-  -- Image load confirmations
-  boomsImg <- maybe (throw "Couldn't find booms element!") pure img'
-  shipImage <- maybe (throw "Couldn't find ship element!") pure img
+  boomsImg <- (\b -> mkSprite b { h: 40.0, w: 39.0 } 13) <$> loadImg "boomsImage" docNEPN
+  shipImg <- loadImg "shipImage" docNEPN
   -- Create input signals
   leftIn  <- keyPressed leftKeyCode
   rightIn <- keyPressed rightKeyCode
-  downIn  <- keyPressed downKeyCode
   upIn    <- keyPressed upKeyCode
+  downIn  <- keyPressed downKeyCode
   -- Build input producer
-  let inps = mkKeyInput <$> leftIn <*> rightIn <*> downIn <*> upIn 
+  let inps = mkKeyInput <$> leftIn <*> rightIn <*> upIn <*> downIn
   -- Build game loop
-  let game = foldp upState (startState c) (sampleOn frames inps)
+  let game = foldp upState (startState c shipImg boomsImg) (sampleOn frames inps)
   -- run game loop using input signals
-  runSignal (render shipImage <$> game)
+  runSignal (render <$> game)
