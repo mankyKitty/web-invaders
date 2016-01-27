@@ -40,3 +40,20 @@ exports.drawImageFromElement = function(ctx) {
     };
   };
 };
+
+exports.drawImageFromElementScale = function(ctx) {
+  return function(elem) {
+    return function(x) {
+      return function(y) {
+        return function(dx) {
+          return function(dy) {
+            return function() {
+              ctx.drawImage(elem, x, y, dx, dy);
+              return ctx;
+            };
+          };
+        };
+      };
+    };
+  };
+};

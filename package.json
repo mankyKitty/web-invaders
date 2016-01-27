@@ -1,0 +1,21 @@
+{
+  "name": "web-invaders",
+  "version": "0.0.1",
+  "description": "Wat",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mankyKitty/web-invaders.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mankyKitty/web-invaders/issues"
+  }
+}

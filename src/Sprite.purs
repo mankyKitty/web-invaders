@@ -5,12 +5,10 @@ import Prelude
 import Data.Int (toNumber)
 
 import Data.Lens
-import Data.Lens.At
-import Data.Lens.Index
 
 import Data.Unfoldable (unfoldr)
 import Data.Tuple
-import Data.Maybe (Maybe(Just,Nothing),maybe,fromMaybe)
+import Data.Maybe (Maybe(Just,Nothing))
 
 import Data.Array hiding ((..))
 import Data.NonEmpty (NonEmpty(NonEmpty),fromNonEmpty)
@@ -23,13 +21,15 @@ import DOM.Node.Types (Element())
 type DimensionPair = { w :: Number, h :: Number }
 type CoordinatePair = { x :: Number, y :: Number }
 
+showCoordinatePair :: CoordinatePair -> String
+showCoordinatePair { x:x, y:y } = "{ x: " <> show x <> ", y: " <> show y <> " }"
+
 newtype SpriteFrames = SpriteFrames (NonEmpty Array CoordinatePair)
 
 data Sprite = Sprite
   { dimensions :: DimensionPair
   , frames :: SpriteFrames
   , element :: Element
-  , frame :: Int
   }
 
 _Width :: LensP DimensionPair Number
@@ -65,7 +65,3 @@ mkSprite e dim framesN = Sprite {
   where
     frames = SpriteFrames <<< NonEmpty { x: 0.0, y: 0.0 } <<<
              map (\x -> { y: 0.0, x: (x * dim.w) }) <<< ranger 1.0 $ toNumber framesN
-
-
-
-

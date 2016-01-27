@@ -1,6 +1,8 @@
 module Utils 
   ( drawImageFromElement
+  , drawImageFromElementScale
   , drawSpriteFrame
+  , (&)
   ) where
 
 import Data.Lens ((^.))
@@ -11,6 +13,11 @@ import Graphics.Canvas
 import DOM.Node.Types (Element())
 
 import Sprite (CoordinatePair(),DimensionPair(),_Width,_Height,_X,_Y)
+
+infix 1 &
+
+(&) :: forall a b. a -> (a -> b) -> b
+(&) x f = f x
 
 drawSpriteFrame
   :: forall eff. Context2D
@@ -41,9 +48,17 @@ foreign import drawImageFinalForm
   -> Eff (canvas :: Canvas | eff) Context2D
 
 foreign import drawImageFromElement
-  :: forall eff. Context2D 
-  -> Element 
-  -> Number 
-  -> Number 
+  :: forall eff. Context2D
+  -> Element
+  -> Number
+  -> Number
   -> Eff (canvas :: Canvas | eff) Context2D
 
+foreign import drawImageFromElementScale
+  :: forall eff. Context2D
+  -> Element
+  -> Number
+  -> Number
+  -> Number
+  -> Number
+  -> Eff (canvas :: Canvas | eff) Context2D
