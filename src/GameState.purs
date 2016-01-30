@@ -7,6 +7,7 @@ import DOM.Node.Types (Element())
 import Signal.Time (Time())
 
 import Sprite (CoordinatePair())
+import Mobs (Mob())
 
 import Data.Lens (LensP(),TraversalP(),lens,traversed)
 
@@ -17,7 +18,7 @@ type GameState =
   , playerImg :: Element
   , playerBulletImg :: Element
   , playerBullets :: Array CoordinatePair
-  , mobs :: Array CoordinatePair
+  , mobs :: Array Mob
   , mobsImg :: Element
   , lastFired :: Time
   }
@@ -25,7 +26,7 @@ type GameState =
 mobsImg :: forall r. LensP { mobsImg :: Element | r } Element
 mobsImg = lens _.mobsImg (_ { mobsImg = _ })
 
-mobs :: forall r. LensP { mobs :: Array CoordinatePair | r } (Array CoordinatePair)
+mobs :: forall r. LensP { mobs :: Array Mob | r } (Array Mob)
 mobs = lens _.mobs (_ { mobs = _ })
 
 lastFired :: forall r. LensP { lastFired :: Time | r } Time

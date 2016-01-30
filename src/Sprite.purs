@@ -54,7 +54,7 @@ getFrame (Sprite { dimensions = d, frames = SpriteFrames fs }) n =
 ranger :: Number -> Number -> Array Number
 ranger k n = unfoldr numnum k
   where
-    numnum kP = 
+    numnum kP =
       if kP < n then Just (Tuple kP $ kP + 1.0) else Nothing
 
 mkSprite :: Element -> DimensionPair -> Int -> Sprite

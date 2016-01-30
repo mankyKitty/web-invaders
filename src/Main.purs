@@ -30,7 +30,7 @@ import Signal (foldp, runSignal, sampleOn)
 import Signal.DOM (animationFrame)
 
 import Sprite (Sprite(),CoordinatePair(),_X,_Y)
-import Utils ((&),drawImageFromElement,drawImageFromElementScale)
+import Utils (drawImageFromElement)
 import Input (KeyInput(),readInput,space,frame)
 
 import Mobs
@@ -51,17 +51,17 @@ type EffGame eff a =
       ) a
 
 canvasRect :: Rectangle
-canvasRect = { x: 0.0, y: 0.0, w: 600.0, h: 600.0 }
+canvasRect = { x: 0.0, y: 0.0, w: 320.0, h: 480.0 }
 
 startState :: Context2D -> Element -> Element -> Element -> EffGame () GameState
 startState ctx ship bImg mImg =
   pure { ctx: ctx
        , screen: canvasRect
-       , playerLoc: { x: 280.0, y: 550.0 }
+       , playerLoc: { y: 440.0, x: 170.0 }
        , playerImg: ship
        , playerBulletImg: bImg
        , playerBullets: []
-       , mobs: addMobs 7 $ { x: 280.0, y: 100.0 }
+       , mobs: addMobs 7 30.0 $ { x: 10.0, y: 10.0 }
        , mobsImg: mImg
        , lastFired: 0.0
        }
@@ -100,8 +100,8 @@ addPShot inp g = if triggerPressed && shotGap
     triggerPressed = inp ^. space
 
     addNewShot gP = gP
-      & (lastFired .~ (inp ^. frame))
-      & (playerBullets %~ (cons <<< spawnBulletAt $ gP ^. playerLoc))
+      # (lastFired .~ (inp ^. frame))
+      # (playerBullets %~ (cons <<< spawnBulletAt $ gP ^. playerLoc))
 
     -- Ugh...
     spawnBulletAt p = { x: p.x + 14.0, y: p.y - 15.0 }
@@ -113,10 +113,12 @@ upState
 upState input gs =
   addPShot input
   <<< pruneBullets
+  <<< moveEnemyWave
   <<< moveBullets
   <<< movePlayer
   <$> gs
   where
+    moveEnemyWave g = g # mobs %~ moveMobs 5.0 g.screen
     movePlayer = playerLoc %~ moveCoordByInput playerMoveDist input
     moveBullets = pBullets %~ (_Y %~ (\y -> y - bulletSpeed))
     pruneBullets = playerBullets %~ filter (\p -> p.y >= 0.1)
@@ -148,19 +150,7 @@ render g = do
   -- Draw the players bullets
   dMany_ (gameSt ^. playerBulletImg) $ gameSt ^. playerBullets
   -- Draw the monsters
-  traverse_ (\m ->
-               drawImageFromElementScale
-               ctx
-               (gameSt ^. mobsImg)
-               m.x
-               m.y
-               mobX
-               mobY
-             )
-    $ gameSt ^. mobs
-  where
-    mobX = 43.0
-    mobY = 43.0
+  traverse_ (\m -> drawElemAt ctx (gameSt ^. mobsImg) (m ^. mobCoord)) $ gameSt ^. mobs
 
 getDocumentNode :: forall eff. Eff (dom :: DOM | eff) NonElementParentNode
 getDocumentNode = htmlDocumentToNonElementParentNode <$> (window >>= document)
