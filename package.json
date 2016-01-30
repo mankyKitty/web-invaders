@@ -7,7 +7,9 @@
     "test": "test"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "pulp build --to dist/Main.js",
+    "test": "pulp test",
+    "prepublish": "bower install && npm run build"
   },
   "repository": {
     "type": "git",
@@ -17,5 +19,10 @@
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/mankyKitty/web-invaders/issues"
+  },
+  "devDependencies": {
+    "bower": "^1.7.7",
+    "pulp": "^7.0.0",
+    "purescript": "^0.7.6"
   }
 }
