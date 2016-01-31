@@ -15,3 +15,8 @@ Bullets by [Phobi](http://opengameart.org/users/phobi)
 Enemy ships by [C-TOY](http://opengameart.org/users/c-toy)
 
 Player ship by [nareiK](http://opengameart.org/users/nareik)
+
+Bonus Credits:
+-----------------
+
+Thanks to @damncabbage for the build script snippets!
