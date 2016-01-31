@@ -9,6 +9,8 @@ import Data.Array (replicate)
 
 import Data.Lens (LensP(),(%~),(^.),(.~),to,lens)
 
+import Signal.Time (Time())
+
 import Graphics.Canvas (Rectangle())
 import Sprite (CoordinatePair(),_X,_Y,ranger)
 
@@ -30,17 +32,24 @@ mobX = mobCoord <<< _X
 mobY :: LensP Mob Number
 mobY = mobCoord <<< _Y
 
+mobsShoot :: Time -> Time -> Boolean
+mobsShoot last curr = curr - last >= 300.0
+
 addMobs :: Int -> Number -> CoordinatePair -> Array Mob
 addMobs n buffer start = do
   mob <- replicate n start
   mobN <- ranger 1.0 $ toNumber n
   pure <<< Mob Right $ mob { y = mob.y + (mobN * buffer), x = mob.x + (mobN * buffer) }
 
-moveMobs :: Number -> Rectangle -> Array Mob -> Array Mob
-moveMobs vel box = map (wibble <<< setJink)
-  where
-    wibble m = m # mobY %~ (+ (-(Math.cos (m ^. mobX <<< to (/ 100.0)) ) * 5.0))
+wibble :: Mob -> Mob
+wibble m = m # mobY %~ (+ (-(Math.cos (m ^. mobX <<< to (/ 100.0)) ) * 5.0))
 
+wobble :: Mob -> Mob
+wobble m = m # mobY %~ (+ (Math.sin (m ^. mobX <<< to (/ 100.0)) * 5.0))
+
+moveMobs :: Number -> (Mob -> Mob) -> Rectangle -> Array Mob -> Array Mob
+moveMobs vel wub box = map (wub <<< setJink)
+  where
     setJink m@(Mob Right c) =
       if (c ^. _X) + vel >= box.w
       then m # (mobHeading .~ Left) # (mobX %~ (\x -> x - vel))

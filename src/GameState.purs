@@ -18,10 +18,42 @@ type GameState =
   , playerImg :: Element
   , playerBulletImg :: Element
   , playerBullets :: Array CoordinatePair
+  , playerScore :: Int
+  , playerLives :: Int
   , mobs :: Array Mob
+  , mobCount :: Int
+  , mobWub :: (Mob -> Mob)
   , mobsImg :: Element
+  , mobBulletImg :: Element
+  , mobBullets :: Array CoordinatePair
   , lastFired :: Time
+  , lastMobFired :: Time
+  , gameFinished :: Boolean
   }
+
+gameFinished :: forall r. LensP { gameFinished :: Boolean | r } Boolean
+gameFinished = lens _.gameFinished (_ { gameFinished = _ })
+
+mobCount :: forall r. LensP { mobCount :: Int | r } Int
+mobCount = lens _.mobCount (_ { mobCount = _ })
+
+playerScore :: forall r. LensP { playerScore :: Int | r } Int
+playerScore = lens _.playerScore (_ { playerScore = _ })
+
+playerLives :: forall r. LensP { playerLives :: Int | r } Int
+playerLives = lens _.playerLives (_ { playerLives = _ })
+
+mobWub :: forall r. LensP { mobWub :: (Mob -> Mob) | r } (Mob -> Mob)
+mobWub = lens _.mobWub (_ { mobWub = _ })
+
+mobBulletImg :: forall r. LensP { mobBulletImg :: Element | r } Element
+mobBulletImg = lens _.mobBulletImg (_ { mobBulletImg = _})
+
+mobBullets :: forall r. LensP { mobBullets :: Array CoordinatePair | r } (Array CoordinatePair)
+mobBullets = lens _.mobBullets (_ { mobBullets = _})
+
+mBullets :: TraversalP GameState CoordinatePair
+mBullets = mobBullets <<< traversed
 
 mobsImg :: forall r. LensP { mobsImg :: Element | r } Element
 mobsImg = lens _.mobsImg (_ { mobsImg = _ })
@@ -31,6 +63,9 @@ mobs = lens _.mobs (_ { mobs = _ })
 
 lastFired :: forall r. LensP { lastFired :: Time | r } Time
 lastFired = lens _.lastFired (_ { lastFired = _ })
+
+lastMobFired :: forall r. LensP { lastMobFired :: Time | r } Time
+lastMobFired = lens _.lastMobFired (_ { lastMobFired = _ })
 
 context2d :: forall r. LensP { ctx :: Context2D | r } Context2D
 context2d = lens _.ctx (_ { ctx = _ })

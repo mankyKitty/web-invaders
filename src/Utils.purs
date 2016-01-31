@@ -2,8 +2,10 @@ module Utils
   ( drawImageFromElement
   , drawImageFromElementScale
   , drawSpriteFrame
+  , rectInter
   ) where
 
+import Prelude ((<),(>),(&&),(+))
 import Data.Lens ((^.))
 import Data.Tuple
 import Control.Monad.Eff (Eff())
@@ -13,6 +15,18 @@ import DOM.Node.Types (Element())
 
 import Sprite (CoordinatePair(),DimensionPair(),_Width,_Height,_X,_Y)
 
+rectInter
+  ::CoordinatePair
+  -> DimensionPair
+  -> CoordinatePair
+  -> DimensionPair
+  -> Boolean
+rectInter aXY aWH bXY bWH =
+  aXY.x < (bXY.x + bWH.w) &&
+  (aXY.x + aWH.w) > bXY.x &&
+  aXY.y < (bXY.y + bWH.h) &&
+  (aXY.y + aWH.h) > bXY.y
+
 drawSpriteFrame
   :: forall eff. Context2D
   -> Element
@@ -21,7 +35,7 @@ drawSpriteFrame
   -> Tuple CoordinatePair DimensionPair
   -> Eff (canvas :: Canvas | eff) Context2D
 drawSpriteFrame ctx e dx dy (Tuple coord dim) =
-  drawImageFinalForm ctx e coX coY dW dH dx dy dW dH 
+  drawImageFinalForm ctx e coX coY dW dH dx dy dW dH
   where
     dW = dim ^. _Width
     dH = dim ^. _Height

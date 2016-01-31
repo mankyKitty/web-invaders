@@ -1,3 +1,17 @@
 .img-asset {
     display: none;
 }
+
+body {
+    background: url(http://apod.nasa.gov/apod/image/1601/BrightBoom_JinMa_3000.jpg);
+}
+
+.game-wrapper {
+    text-align: center;
+}
+
+#canvas {
+    background: grey;
+    border: white;
+    border-style: dotted;
+}
