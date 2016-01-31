@@ -26,12 +26,15 @@ import Control.Monad.Eff
 import Control.Monad.Eff.Exception (EXCEPTION(), throw)
 import Control.Monad.Eff.Console (CONSOLE())
 
-import Signal (foldp, runSignal, sampleOn)
+import Signal (Signal(), runSignal, sampleOn)
+import Signal.Time (Time())
 import Signal.DOM (animationFrame)
 
-import Sprite (Sprite(),CoordinatePair(),_X,_Y)
+import Control.Monad.ST
+
+import Sprite (Sprite(),CoordinatePair(),_Y)
 import Utils (drawImageFromElement)
-import Input (KeyInput(),readInput,space,frame)
+import Input (KeyInput(),readInput)
 
 import Mobs
 import GameState
@@ -53,18 +56,18 @@ type EffGame eff a =
 canvasRect :: Rectangle
 canvasRect = { x: 0.0, y: 0.0, w: 320.0, h: 480.0 }
 
-startState :: Context2D -> Element -> Element -> Element -> EffGame () GameState
+startState :: Context2D -> Element -> Element -> Element -> GameState
 startState ctx ship bImg mImg =
-  pure { ctx: ctx
-       , screen: canvasRect
-       , playerLoc: { y: 440.0, x: 170.0 }
-       , playerImg: ship
-       , playerBulletImg: bImg
-       , playerBullets: []
-       , mobs: addMobs 7 30.0 $ { x: 10.0, y: 10.0 }
-       , mobsImg: mImg
-       , lastFired: 0.0
-       }
+  { ctx: ctx
+  , screen: canvasRect
+  , playerLoc: { y: 440.0, x: 170.0 }
+  , playerImg: ship
+  , playerBulletImg: bImg
+  , playerBullets: []
+  , mobs: addMobs 7 30.0 $ { x: 10.0, y: 10.0 }
+  , mobsImg: mImg
+  , lastFired: 0.0
+  }
 
 requestContext :: String -> EffGame () Context2D
 requestContext elemId =
@@ -91,32 +94,26 @@ moveCoordByInput dist { left: l, right: r, up: u, down: d } c = mv l r u d
         mv _ _ _ _ = c
 
 addPShot :: KeyInput -> (GameState -> GameState)
-addPShot inp g = if triggerPressed && shotGap
-                 then addNewShot g
-                 else g
+addPShot inp g =
+  if triggerPressed && shotGap then addNewShot g else g
   where
-    shotGap = (inp ^. frame) - (g ^. lastFired) >= 100.0
+    shotGap = (inp.frame) - (g.lastFired) >= 100.0
 
-    triggerPressed = inp ^. space
+    triggerPressed = inp.space
 
     addNewShot gP = gP
-      # (lastFired .~ (inp ^. frame))
-      # (playerBullets %~ (cons <<< spawnBulletAt $ gP ^. playerLoc))
+      # (lastFired .~ (inp.frame))
+      # (playerBullets %~ (cons <<< spawnBulletAt $ gP.playerLoc))
 
     -- Ugh...
     spawnBulletAt p = { x: p.x + 14.0, y: p.y - 15.0 }
 
 upState
   :: KeyInput
-  -> EffGame () GameState
-  -> EffGame () GameState
-upState input gs =
-  addPShot input
-  <<< pruneBullets
-  <<< moveEnemyWave
-  <<< moveBullets
-  <<< movePlayer
-  <$> gs
+  -> GameState
+  -> GameState
+upState input =
+  addPShot input <<< pruneBullets <<< moveEnemyWave <<< moveBullets <<< movePlayer
   where
     moveEnemyWave g = g # mobs %~ moveMobs 5.0 g.screen
     movePlayer = playerLoc %~ moveCoordByInput playerMoveDist input
@@ -135,22 +132,21 @@ drawElemAt
   -> Element
   -> CoordinatePair
   -> Eff (canvas :: Canvas | e) Unit
-drawElemAt c e cp = void $ drawImageFromElement c e (cp ^. _X) (cp ^. _Y)
+drawElemAt c e cp = void $ drawImageFromElement c e cp.x cp.y
 
-render :: EffGame () GameState -> EffGame () Unit
-render g = do
-  gameSt <- g
+render :: forall h. GameState -> EffGame (st :: ST h) Unit
+render gameSt = do
   let ctx = gameSt ^. context2d
       dMany_ img =  traverse_ (drawElemAt ctx img)
 
   clearRect ctx gameSt.screen
   setFillStyle "#0000FF" ctx
   -- Draw the player
-  drawElemAt ctx (gameSt ^. playerImg) (gameSt ^. playerLoc)
+  drawElemAt ctx gameSt.playerImg gameSt.playerLoc
   -- Draw the players bullets
-  dMany_ (gameSt ^. playerBulletImg) $ gameSt ^. playerBullets
+  dMany_ gameSt.playerBulletImg gameSt.playerBullets
   -- Draw the monsters
-  traverse_ (\m -> drawElemAt ctx (gameSt ^. mobsImg) (m ^. mobCoord)) $ gameSt ^. mobs
+  traverse_ (\m -> drawElemAt ctx gameSt.mobsImg (m ^. mobCoord)) $ gameSt ^. mobs
 
 getDocumentNode :: forall eff. Eff (dom :: DOM | eff) NonElementParentNode
 getDocumentNode = htmlDocumentToNonElementParentNode <$> (window >>= document)
@@ -169,20 +165,31 @@ loadImg s dom = getElemById s dom >>= maybe (throw $ "Couldn't load: " <> s) pur
 
 main :: EffGame () Unit
 main = do
-  -- Init
-  c <- requestContext "canvas"
   frames <- animationFrame
   docNEPN <- getDocumentNode
-  -- Image loading
-  initState <- startState
-               <$> requestContext "canvas"
-               <*> loadImg "shipImage-normal" docNEPN
-               <*> loadImg "player-bullet" docNEPN
-               <*> loadImg "mob-one-img" docNEPN
-
+  -- Image
+  ctx <- requestContext "canvas"
+  ship <- loadImg "shipImage-normal" docNEPN
+  bullet <- loadImg "player-bullet" docNEPN
+  mob <- loadImg "mob-one-img" docNEPN
+  let st = startState ctx ship bullet mob
   -- Create input signal
   inps <- readInput
   -- Build game loop
-  let game = foldp upState initState (sampleOn frames inps)
+  runST (runGame st inps frames)
+  --let game = foldp upState initState (sampleOn frames inps)
   -- run game loop using input signals
-  runSignal (render <$> game)
+  --runSignal (render <$> game)
+  where
+    mkGoNow :: forall h. STRef h GameState -> KeyInput -> EffGame (st :: ST h) Unit
+    mkGoNow g k = modifySTRef g (upState k) >>= render
+
+    runGame
+      :: forall h. GameState
+      -> Signal KeyInput
+      -> Signal Time
+      -> EffGame (st :: ST h) Unit
+    runGame st inp fs = do
+      sRef <- newSTRef st
+      let game = sampleOn fs inp
+      runSignal (mkGoNow sRef <$> game)

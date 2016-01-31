@@ -3,8 +3,6 @@ Web Invaders
 
 Feeble shmup. My first PureScript game for [onegameamonth.com](http://onegameamonth.com).
 
-Terrible performance, work in progress! :)
-
 Art Credits:
 ---------------
 
@@ -20,3 +18,5 @@ Bonus Credits:
 -----------------
 
 Thanks to @damncabbage for the build script snippets!
+
+Thanks to kritzcreek for the tip to use the ST monad, much awesome ensued.
