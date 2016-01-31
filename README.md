@@ -3,6 +3,20 @@ Web Invaders
 
 Feeble shmup. My first PureScript game for [onegameamonth.com](http://onegameamonth.com).
 
+In theory, you should be able to just clone the repo and open the `index.html`, that will run the game.
+
+I'm aware so much is missing, but in the spirit of One Game a Month, I'm calling it done. :)
+
+....... Maybe.
+
+Instructions:
+-------------
+
+Arrow Keys to move.
+Space to shoot.
+
+You lose if any escape past you.
+
 Art Credits:
 ---------------
 
